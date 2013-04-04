@@ -66,11 +66,11 @@ module CapistranoResque
           script = <<-END
             if [ -e #{pid} ]; then
               if kill -0 `cat #{pid}` > /dev/null 2>&1 ; then
-                echo "Resque worker already running"
-                exit 0
+                echo "Resque worker already running";
+                exit 0;
               fi;
 
-              rm #{pid}
+              rm #{pid};
             fi;
 
             cd #{current_path} && PIDFILE=#{pid} BACKGROUND=yes VERBOSE=1 INTERVAL=#{interval} #{queues} #{resque_env} #{resque_bundle} exec rake resque:work
