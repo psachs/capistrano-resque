@@ -29,7 +29,8 @@ module CapistranoResque
         end
 
         def workers_roles
-          return workers.keys
+          return workers.keys if workers.first[1].is_a? Hash
+          [ :resque_worker ]
         end
 
         def for_each_workers(&block)
