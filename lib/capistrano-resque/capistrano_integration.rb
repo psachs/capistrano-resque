@@ -119,7 +119,7 @@ module CapistranoResque
                 number_of_workers = worker[:worker_count] || 1
                 interval = worker[:interval] || 1
 
-                logger.info "Starting #{config} worker(s) with QUEUE: #{queue}"
+                logger.info "Starting #{number_of_workers} worker(s) with QUEUE: #{queue}"
                 threads = []
                 number_of_workers.times do
                   pid = "./tmp/pids/resque_work_#{worker_id}.pid"
