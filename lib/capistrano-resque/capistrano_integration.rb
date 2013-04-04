@@ -30,8 +30,9 @@ module CapistranoResque
 
         def workers_roles
           roles = workers.map {|w| w[:role] }.compact
-          return roles unless roles.empty?
-          [ :resque_worker ]
+          roles  = [ :resque_worker ] if roles.empty?
+
+          roles
         end
 
         def for_each_workers(&block)
