@@ -73,7 +73,7 @@ module CapistranoResque
               rm #{pid}
             fi;
 
-            cd "#{current_path} && PIDFILE=#{pid} BACKGROUND=yes VERBOSE=1 INTERVAL=#{interval} #{queues} #{resque_env} #{resque_bundle} exec rake resque:work"
+            cd #{current_path} && PIDFILE=#{pid} BACKGROUND=yes VERBOSE=1 INTERVAL=#{interval} #{queues} #{resque_env} #{resque_bundle} exec rake resque:work
           END
 
           script
