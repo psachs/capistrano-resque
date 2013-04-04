@@ -3,51 +3,94 @@ require "capistrano/version"
 
 module CapistranoResque
   class CapistranoIntegration
+    TASKS = [
+      'resque:status',
+      'resque:start',
+      'resque:stop',
+      'resque:restart'
+      'resque:shutdown',
+      'scheduler:start',
+      'scheduler:stop',
+      'scheduler:restart'
+    ]
+
     def self.load_into(capistrano_config)
       capistrano_config.load do
+        before(CapistranoIntegration::TASKS) do
+          _cset(:app_env)            { (fetch(:rails_env) rescue 'production') }
+          _cset(:workers)            { {"*" => {:count => 1, :interval => 5}} }
+          _cset(:resque_kill_signal) { "QUIT" }
+          _cset(:resque_env)         { nil }
+          _cset(:resque_bundle)      { fetch(:bundle_cmd) rescue 'bundle' }
+        end
 
-        _cset(:workers, {"*" => 1})
-        _cset(:resque_kill_signal, "QUIT")
-        _cset(:interval, "5")
+        def remote_process_exists?(pid_file)
+          "[ -e #{pid_file} ] && kill -0 `cat #{pid_file}` > /dev/null 2>&1"
+        end
 
         def workers_roles
           return workers.keys if workers.first[1].is_a? Hash
-          [:resque_worker]
         end
 
         def for_each_workers(&block)
-          if workers.first[1].is_a? Hash
-            workers_roles.each do |role|
-              yield(role.to_sym, workers[role.to_sym])
-            end
-          else
-            yield(:resque_worker,workers)
+          workers_roles.each do |role|
+            yield(role.to_sym, workers[role.to_sym])
           end
         end
 
-        def status_command
-          "if [ -e #{current_path}/tmp/pids/resque_work_1.pid ]; then \
-            for f in $(ls #{current_path}/tmp/pids/resque_work*.pid); \
-              do ps -p $(cat $f) | sed -n 2p ; done \
-           ;fi"
+        def resque_send_signal(signal, pid)
+          "kill -s #{signal} #{pid}"
         end
 
-        def start_command(queue, pid)
-          "cd #{current_path} && RAILS_ENV=#{rails_env} QUEUE=\"#{queue}\" \
-           PIDFILE=#{pid} BACKGROUND=yes VERBOSE=1 INTERVAL=#{interval} \
-           #{fetch(:bundle_cmd, "bundle")} exec rake resque:work"
+        def status_command
+          script = <<-END
+            if [ -e #{current_path}/tmp/pids/resque_work_1.pid ]; then
+              for f in $(ls #{current_path}/tmp/pids/resque_work*.pid);
+                do ps -p $(cat $f) | sed -n 2p ; done
+            ;fi
+          END
+
+          script
+        end
+
+        def start_command(queue, pid, interval)
+          if queue.split(",").length > 1
+            queues = "QUEUES=#{queue}"
+          else
+            queues = "QUEUE=#{queue}"
+          end
+
+          script = <<-END
+            set -x
+            if [ -e #{pid} ]; then
+              if kill -0 `cat #{pid}` > /dev/null 2 >&1; then
+                echo "Resque worker already running!";
+                exit 0;
+              fi;
+
+              rm #{pid}
+            fi;
+
+            cd "#{current_path} && PIDFILE=#{pid} BACKGROUND=yes VERBOSE=1 INTERVAL=#{interval} #{queues} #{resque_env} #{resque_bundle} exec rake resque:work"
+          END
+
+          script
         end
 
         def stop_command
-          "if [ -e #{current_path}/tmp/pids/resque_work_1.pid ]; then \
-           for f in `ls #{current_path}/tmp/pids/resque_work*.pid`; \
-             do #{try_sudo} kill -s #{resque_kill_signal} `cat $f` \
-             && rm $f ;done \
-           ;fi"
+          script = <<-END
+            if [ `find . -name 'resque_work*.pid' | wc -w` -gt 2 ]; then
+              for f in `ls #{current_path}/tmp/pids/resque_work*.pid`; do
+                #{try_sudo} kill -s #{resque_kill_signal} `cat $f` && rm $f
+              done
+            fi
+          END
+
+          script
         end
 
         def start_scheduler(pid)
-          "cd #{current_path} && RAILS_ENV=#{rails_env} \
+          "cd #{current_path} && RAILS_ENV=#{app_env} \
            PIDFILE=#{pid} BACKGROUND=yes VERBOSE=1 \
            #{fetch(:bundle_cmd, "bundle")} exec rake resque:scheduler"
         end
@@ -68,12 +111,15 @@ module CapistranoResque
           task :start, :roles => lambda { workers_roles() }, :on_no_matching_servers => :continue do
             for_each_workers do |role, workers|
               worker_id = 1
-              workers.each_pair do |queue, number_of_workers|
-                logger.info "Starting #{number_of_workers} worker(s) with QUEUE: #{queue}"
+              workers.each do |queue, config|
+
+                logger.info "Starting #{config} worker(s) with QUEUE: #{queue}"
+                number_of_workers = config[:count] || 1
+                interval = config[:interval] || 5
                 threads = []
                 number_of_workers.times do
                   pid = "./tmp/pids/resque_work_#{worker_id}.pid"
-                  threads << Thread.new(pid) { |pid| run(start_command(queue, pid), :roles => role) }
+                  threads << Thread.new(pid) { |pid| run(start_command(queue, pid, interval), :roles => role) }
                   worker_id += 1
                 end
                 threads.each(&:join)
