@@ -36,7 +36,7 @@ module CapistranoResque
         end
 
         def for_each_workers(&block)
-          worker_roles.each do |role|
+          workers_roles.each do |role|
             yield(role, workers.select { |w| (w[:role] == role) || ( w[:role].nil? && role == :resque_worker ) })
           end
         end
