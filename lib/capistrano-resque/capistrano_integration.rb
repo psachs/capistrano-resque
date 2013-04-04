@@ -114,11 +114,12 @@ module CapistranoResque
           task :start, :roles => lambda { workers_roles() }, :on_no_matching_servers => :continue do
             for_each_workers do |role, workers|
               worker_id = 1
-              workers.each do |queue, config|
+              workers.each do |worker|
+                queue = worker[:queue]
+                number_of_workers = worker[:worker_count] || 1
+                interval = worker[:interval] || 1
 
                 logger.info "Starting #{config} worker(s) with QUEUE: #{queue}"
-                number_of_workers = config[:worker_count] || 1
-                interval = config[:interval] || 5
                 threads = []
                 number_of_workers.times do
                   pid = "./tmp/pids/resque_work_#{worker_id}.pid"
