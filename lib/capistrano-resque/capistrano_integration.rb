@@ -18,7 +18,7 @@ module CapistranoResque
       capistrano_config.load do
         before(CapistranoIntegration::TASKS) do
           _cset(:app_env)            { (fetch(:rails_env) rescue 'production') }
-          _cset(:workers)            { {"*" => {:count => 1, :interval => 5}} }
+          _cset(:workers)            { {:queue => "*", :worker_count => 1, :interval => 5}} }
           _cset(:resque_kill_signal) { "QUIT" }
           _cset(:resque_env)         { nil }
           _cset(:resque_bundle)      { fetch(:bundle_cmd) rescue 'bundle' }
@@ -29,13 +29,14 @@ module CapistranoResque
         end
 
         def workers_roles
-          return workers.keys if workers.first[1].is_a? Hash
+          roles = workers.map {|w| w[:role] }.compact
+          return roles unless roles.empty?
           [ :resque_worker ]
         end
 
         def for_each_workers(&block)
-          workers_roles.each do |role|
-            yield(role.to_sym, workers[role.to_sym])
+          worker_roles.each do |role|
+            yield(role, workers.select { |w| (w[:role] == role) || ( w[:role].nil? && role == :resque_worker ) })
           end
         end
 
@@ -115,7 +116,7 @@ module CapistranoResque
               workers.each do |queue, config|
 
                 logger.info "Starting #{config} worker(s) with QUEUE: #{queue}"
-                number_of_workers = config[:count] || 1
+                number_of_workers = config[:worker_count] || 1
                 interval = config[:interval] || 5
                 threads = []
                 number_of_workers.times do
