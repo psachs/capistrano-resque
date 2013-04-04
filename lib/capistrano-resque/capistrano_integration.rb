@@ -64,11 +64,10 @@ module CapistranoResque
           end
 
           script = <<-END
-            set -x
             if [ -e #{pid} ]; then
-              if kill -0 `cat #{pid}` > /dev/null 2>&1; then
-                echo "Resque worker already running";
-                exit 0;
+              if kill -0 `cat #{pid}` > /dev/null 2>&1 ; then
+                echo "Resque worker already running"
+                exit 0
               fi;
 
               rm #{pid}
@@ -122,7 +121,7 @@ module CapistranoResque
                 logger.info "Starting #{number_of_workers} worker(s) with QUEUE: #{queue}"
                 threads = []
                 number_of_workers.times do
-                  pid = "./tmp/pids/resque_work_#{worker_id}.pid"
+                  pid = "#{current_path}/tmp/pids/resque_work_#{worker_id}.pid"
                   threads << Thread.new(pid) { |pid| run(start_command(queue, pid, interval), :roles => role) }
                   worker_id += 1
                 end
