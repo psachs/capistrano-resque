@@ -18,7 +18,7 @@ module CapistranoResque
       capistrano_config.load do
         before(CapistranoIntegration::TASKS) do
           _cset(:app_env)            { (fetch(:rails_env) rescue 'production') }
-          _cset(:workers)            { {:queue => "*", :worker_count => 1, :interval => 5}} }
+          _cset(:workers)            { [{:queue => "*", :worker_count => 1, :interval => 5}] }
           _cset(:resque_kill_signal) { "QUIT" }
           _cset(:resque_env)         { nil }
           _cset(:resque_bundle)      { fetch(:bundle_cmd) rescue 'bundle' }
