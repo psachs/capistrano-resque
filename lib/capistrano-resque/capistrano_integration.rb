@@ -67,7 +67,7 @@ module CapistranoResque
             set -x
             if [ -e #{pid} ]; then
               if kill -0 `cat #{pid}` > /dev/null 2>&1; then
-                echo "Resque worker already running!";
+                echo "Resque worker already running";
                 exit 0;
               fi;
 
