@@ -7,7 +7,7 @@ module CapistranoResque
       'resque:status',
       'resque:start',
       'resque:stop',
-      'resque:restart'
+      'resque:restart',
       'resque:shutdown',
       'scheduler:start',
       'scheduler:stop',
