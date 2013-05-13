@@ -19,7 +19,7 @@ module CapistranoResque
         before(CapistranoIntegration::TASKS) do
           _cset(:app_env)            { (fetch(:rails_env) rescue 'production') }
           _cset(:workers)            { [{:queue => "*", :worker_count => 1, :interval => 5}] }
-          _cset(:resque_kill_signal) { "QUIT" }
+          _cset(:resque_kill_signal) { "SIGQUIT" }
           _cset(:resque_env)         { nil }
           _cset(:resque_bundle)      { fetch(:bundle_cmd) rescue 'bundle' }
         end
@@ -91,6 +91,18 @@ module CapistranoResque
           script
         end
 
+        def force_stop_command
+          script = <<-END
+            if [ `find #{current_path}/tmp/pids -name "resque_work*.pid" | wc -w` -gt 0 ]; then
+              for f in `ls #{current_path}/tmp/pids/resque_work*.pid`; do
+                #{try_sudo} kill -s SIGKILL `cat $f` && rm $f;
+              done
+            fi
+          END
+
+          script
+        end
+
         def start_scheduler(pid)
           "cd #{current_path} && RAILS_ENV=#{app_env} \
            PIDFILE=#{pid} BACKGROUND=yes VERBOSE=1 \
@@ -130,7 +142,7 @@ module CapistranoResque
             end
           end
 
-          # See https://github.com/defunkt/resque#signals for a descriptions of signals
+          # See https://github.com/resque/resque#signals for a descriptions of signals
           # QUIT - Wait for child to finish processing then exit (graceful)
           # TERM / INT - Immediately kill child then exit (stale or stuck)
           # USR1 - Immediately kill child but don't exit (stale or stuck)
@@ -144,6 +156,14 @@ module CapistranoResque
           desc "Restart running Resque workers"
           task :restart, :roles => lambda { workers_roles() }, :on_no_matching_servers => :continue do
             stop
+
+            # wait at most 30s until resque stopped
+            # TODO check if process is running
+            sleep 30
+
+            # force stop if not stopped yet
+            run(force_stop_command)
+
             start
           end
 
