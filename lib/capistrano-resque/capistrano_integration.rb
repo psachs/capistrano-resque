@@ -81,7 +81,7 @@ module CapistranoResque
 
         def stop_command
           script = <<-END
-            if [ `find #{current_path}/tmp/pids -name "resque_work*.pid" | wc -w` -gt 0 ]; then
+            if [ `find #{current_path}/tmp/pids/ -name "resque_work*.pid" | wc -w` -gt 0 ]; then
               for f in `ls #{current_path}/tmp/pids/resque_work*.pid`; do
                 #{try_sudo} kill -s #{resque_kill_signal} `cat $f` && rm $f;
               done
@@ -93,7 +93,7 @@ module CapistranoResque
 
         def force_stop_command
           script = <<-END
-            if [ `find #{current_path}/tmp/pids -name "resque_work*.pid" | wc -w` -gt 0 ]; then
+            if [ `find #{current_path}/tmp/pids/ -name "resque_work*.pid" | wc -w` -gt 0 ]; then
               for f in `ls #{current_path}/tmp/pids/resque_work*.pid`; do
                 #{try_sudo} kill -s SIGKILL `cat $f` && rm $f;
               done
