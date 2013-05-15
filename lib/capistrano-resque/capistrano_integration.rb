@@ -101,7 +101,7 @@ module CapistranoResque
               for f in `ls #{current_path}/tmp/pids/resque_work*.pid`; do
                 if ps -p `cat $f` > /dev/null 2>&1 ; then
                   #{try_sudo} kill -s SIGKILL `cat $f` && rm $f;
-                end
+                fi;
               done
             fi
           END
