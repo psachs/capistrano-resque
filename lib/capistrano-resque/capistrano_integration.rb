@@ -83,7 +83,7 @@ module CapistranoResque
           script = <<-END
             if [ `find #{current_path}/tmp/pids/ -name "resque_work*.pid" | wc -w` -gt 0 ]; then
               for f in `ls #{current_path}/tmp/pids/resque_work*.pid`; do
-                if kill -0 `cat #{pid}` > /dev/null 2>&1 ; then
+                if kill -0 `cat $f` > /dev/null 2>&1 ; then
                   rm $f;
                 else
                   #{try_sudo} kill -s #{resque_kill_signal} `cat $f` && rm $f;
@@ -99,7 +99,7 @@ module CapistranoResque
           script = <<-END
             if [ `find #{current_path}/tmp/pids/ -name "resque_work*.pid" | wc -w` -gt 0 ]; then
               for f in `ls #{current_path}/tmp/pids/resque_work*.pid`; do
-                if kill -0 `cat #{pid}` > /dev/null 2>&1 ; then
+                if kill -0 `cat $f` > /dev/null 2>&1 ; then
                   rm $f;
                 else
                   #{try_sudo} kill -s SIGKILL `cat $f` && rm $f;
