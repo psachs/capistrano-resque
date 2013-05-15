@@ -164,9 +164,9 @@ module CapistranoResque
           task :restart, :roles => lambda { workers_roles() }, :on_no_matching_servers => :continue do
             stop
 
-            # wait at most 30s until resque stopped
+            # wait at most 10s until resque stopped
             # TODO check if process is running
-            sleep 30
+            sleep 10
 
             # force stop if not stopped yet
             run(force_stop_command)
